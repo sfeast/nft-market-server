@@ -15,7 +15,10 @@
     "casper-cep47-js-client": "^1.0.1",
     "cors": "^2.8.5",
     "ejs": "^3.1.5",
-    "express": "^4.15.2"
+    "express": "^4.15.2",
+    "firebase-admin": "^10.0.2",
+    "minisearch": "^4.0.3",
+    "node-fetch": "^2.6.7"
   },
   "devDependencies": {
     "got": "^11.3.0",
