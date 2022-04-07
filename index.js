@@ -95,4 +95,14 @@ express()
     })
 
 
+    .get('/getAccountBalance', async (req, res) => {
+        const publicKey = CLPublicKey.fromHex(req.query.publicKey)
+        client.balanceOfByPublicKey(publicKey).then(response => {
+            res.status(200).json(response.toNumber());
+        }).catch((error) => {
+            res.send(error);
+            return;
+        })
+    })
+
     .listen(PORT, () => console.log(`Listening on ${ PORT }`))

@@ -39,7 +39,7 @@ class ContractEvents {
                     timestamp: event.timestamp,
                     contract_package_hash: eventData.get('contract_package_hash'),
                     token_id: eventData.get('token_id'),
-                    recipient: eventData.get('recipient') ?.replace("Key::Account(", '').replace(')', '')
+                    recipient: eventData.get('recipient')?.replace("Key::Account(", '').replace(')', '')
                 };
                 switch (event.name) {
                     case CEP47Events.MintOne: this.minted(item);
@@ -57,7 +57,7 @@ class ContractEvents {
     async minted(event) {
         try {
             const fbId = this.constructFBId(event);
-            const metadataUri = (await this.getMetadataURI(event.token_id)) ?.get('token_uri');
+            const metadataUri = (await this.getMetadataURI(event.token_id))?.get('token_uri');
             const metadata = await this.fetchIPFSData(metadataUri);
 
             await db.ref('nfts').child(fbId).update({
