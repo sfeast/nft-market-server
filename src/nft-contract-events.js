@@ -1,17 +1,17 @@
 const admin = require("firebase-admin");
 const db = admin.database();
 const fetch = require('node-fetch');
-const { Contracts, EventStream, EventName } = require('casper-js-sdk');
+const { Contracts } = require('casper-js-sdk');
 const { CEP47Events } = require('casper-cep47-js-client');
 const EventParser = require('./utils/events.js');
 
 class NFTContractEvents {
 
     constructor(opts = {}) {
-        this.eventStreamAddress = opts.eventStreamAddress;
         this.contract = opts.contract;
 
         this.eventParser = new EventParser({
+            eventStreamAddress: opts.eventStreamAddress,
             contractPackageHash: opts.contractPackageHash,
             eventNames: [
                 CEP47Events.MintOne,
@@ -19,40 +19,36 @@ class NFTContractEvents {
                 CEP47Events.BurnOne,
                 CEP47Events.MetadataUpdate,
                 CEP47Events.ApproveToken
-            ]
+            ],
+            eventHandler: this.eventReceived.bind(this)
         });
-        this.parseEvents();
     }
 
-    parseEvents() {
-        const es = new EventStream(this.eventStreamAddress);
+    eventReceived(event) {
+        const eventData = Contracts.fromCLMap(event.clValue.data);
+        const item = {
+            event_type: eventData.get('event_type'),
+            deploy_hash: event.deploy_hash,
+            timestamp: event.timestamp,
+            contract_package_hash: eventData.get('contract_package_hash'),
+            token_id: eventData.get('token_id'),
+            recipient: eventData.get('recipient')?.replace("Key::Account(", '').replace(')', '')
+        };
 
-        es.subscribe(EventName.DeployProcessed, (event) => {
-            const parsedEvents = this.eventParser.parse(event);
+        switch (event.name) {
+            case CEP47Events.MintOne: this.minted(item);
+            break;
+            case CEP47Events.TransferToken:
+            /*
+                - update owner in FB
+                - remove listing one is there (will do in market but if user transfers user -> user
+                  then market won't know about it. Contract token alloawance is revoked by cep47 contract
+                  but still don't wnat listing showing)
+            */
+            break;
+            default: break;
+        }
 
-            if (parsedEvents && parsedEvents.success) {
-                const event = parsedEvents.data[0];
-                const eventData = Contracts.fromCLMap(event.clValue.data);
-                const item = {
-                    event_type: eventData.get('event_type'),
-                    deploy_hash: event.deploy_hash,
-                    timestamp: event.timestamp,
-                    contract_package_hash: eventData.get('contract_package_hash'),
-                    token_id: eventData.get('token_id'),
-                    recipient: eventData.get('recipient')?.replace("Key::Account(", '').replace(')', '')
-                };
-
-                switch (event.name) {
-                    case CEP47Events.MintOne: this.minted(item);
-                    break;
-                    case CEP47Events.TransferToken: //update owner in FB
-                    break;
-                    default: break;
-                }
-            }
-        });
-
-        es.start();
     }
 
     async minted(event) {

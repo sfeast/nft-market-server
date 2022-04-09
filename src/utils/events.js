@@ -1,10 +1,27 @@
-const { CLTypeTag, CLValueBuilder, CLValueParsers } = require('casper-js-sdk');
+const { EventStream, EventName, CLTypeTag, CLValueBuilder, CLValueParsers } = require('casper-js-sdk');
 
 class EventParser {
 
     constructor(opts = {}) {
+        this.eventStreamAddress = opts.eventStreamAddress;
         this.contractPackageHash = opts.contractPackageHash;
         this.eventNames = opts.eventNames;
+        this.eventHandler = opts.eventHandler;
+        this.watchEvents();
+    }
+
+    async watchEvents() {
+      const es = new EventStream(this.eventStreamAddress);
+
+      es.subscribe(EventName.DeployProcessed, (event) => {
+        const parsedEvents = this.parse(event);
+
+        if (parsedEvents && parsedEvents.success) {
+          this.eventHandler(parsedEvents.data[0]);
+        }
+      });
+
+      es.start(); 
     }
 
     parse(value) {
