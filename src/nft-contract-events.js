@@ -34,7 +34,7 @@ class NFTContractEvents {
             token_id: eventData.get('token_id'),
             recipient: eventData.get('recipient')?.replace("Key::Account(", '').replace(')', '')
         };
-
+        
         switch (event.name) {
             case CEP47Events.MintOne: this.minted(item);
             break;
