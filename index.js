@@ -1,7 +1,6 @@
 const express = require('express')
 const path = require('path')
 const PORT = process.env.PORT || 5000
-const bodyParser = require('body-parser')
 const cors = require('cors')
 const admin = require("firebase-admin");
 
@@ -48,18 +47,14 @@ const search = new Search({});
 
 express()
     .use(cors())
-    .use(bodyParser.json())
-    .use(bodyParser({ limit: '5mb' }))
-    .use(bodyParser.urlencoded({
-        extended: true
-    }))
-
+    .use(express.json({ limit: '50mb'}))
     .use(express.static(path.join(__dirname, 'public')))
     .set('views', path.join(__dirname, 'views'))
     .set('view engine', 'ejs')
     .get('/', (req, res) => res.render('pages/index'))
 
     .post('/sendDeploy', async (req, res) => {
+        debugger;
         market.sendDeploy(req.body).then((response) => {
             res.status(200).json(response);
         }).catch((error) => {
