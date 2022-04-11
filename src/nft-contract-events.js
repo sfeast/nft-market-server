@@ -1,6 +1,7 @@
 const admin = require("firebase-admin");
 const db = admin.database();
 const fetch = require('node-fetch');
+const { sleep } = require('./utils/index.js');
 const { Contracts } = require('casper-js-sdk');
 const { CEP47Events } = require('casper-cep47-js-client');
 const EventParser = require('./utils/events.js');
@@ -26,26 +27,25 @@ class NFTContractEvents {
 
     eventReceived(event) {
         const eventData = Contracts.fromCLMap(event.clValue.data);
+
         const item = {
             event_type: eventData.get('event_type'),
             deploy_hash: event.deploy_hash,
             timestamp: event.timestamp,
             contract_package_hash: eventData.get('contract_package_hash'),
             token_id: eventData.get('token_id'),
-            recipient: eventData.get('recipient')?.replace("Key::Account(", '').replace(')', '')
+            // (on burn event recipient is owner)
+            owner: eventData.get('recipient')?.replace("Key::Account(", '').replace(')', '')
         };
         
         switch (event.name) {
             case CEP47Events.MintOne: this.minted(item);
             break;
-            case CEP47Events.TransferToken:
-            /*
-                - update owner in FB
-                - remove listing one is there (will do in market but if user transfers user -> user
-                  then market won't know about it. Contract token alloawance is revoked by cep47 contract
-                  but still don't wnat listing showing)
-            */
+            case CEP47Events.TransferToken: this.transfer(item);
             break;
+            case CEP47Events.BurnOne:
+            case CEP47Events.MetadataUpdate:
+            case CEP47Events.ApproveToken:
             default: break;
         }
 
@@ -54,15 +54,35 @@ class NFTContractEvents {
     async minted(event) {
         try {
             const fbId = this.constructFBId(event);
-            const metadataUri = (await this.getMetadataURI(event.token_id))?.get('token_uri');
-            const metadata = await this.fetchIPFSData(metadataUri);
+            let metadataUri;
+            let metadata;
+
+            try {
+                metadataUri = (await this.getMetadataURI(event.token_id))?.get('token_uri');
+                metadata = await this.fetchIPFSData(metadataUri);
+            } catch(e) {
+                console.log(e);
+            }
 
             await db.ref('nfts').child(fbId).update({
                 contract_package_hash: event.contract_package_hash || null,
                 token_id: event.token_id || null,
-                owner: event.recipient || null, //TODO: check if this field will be different on transfer event & others (on burn event it's owner)
-                token_uri: metadataUri,
-                metadata
+                owner: event.owner || null,
+                token_uri: metadataUri || null,
+                metadata: metadata || null
+            });
+            this.updateActivity(event);
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    async transfer(event) {
+        try {
+            const fbId = this.constructFBId(event);
+
+            await db.ref('nfts').child(fbId).update({
+                owner: event.owner || null
             });
             this.updateActivity(event);
         } catch (e) {
@@ -78,7 +98,7 @@ class NFTContractEvents {
             event_type: event.event_type,
             deploy_hash: event.deploy_hash,
             timestamp: event.timestamp,
-            owner: event.recipient || null, //TODO: check if this field will be different on transfer event.
+            owner: event.owner || null, //TODO: check if this field will be different on transfer event.
         });
     }
 
@@ -101,6 +121,7 @@ class NFTContractEvents {
     }
 
     constructFBId(event) {
+        // FIXME: create a hash
         return `${event.contract_package_hash}?id=${event.token_id}`;
     }
 

@@ -26,6 +26,8 @@ class Market {
 
 		this.marketContractEvents = new MarketContractEvents({
 		    contractPackageHash: opts.marketContractPackageHash,
+		    nftContractPackageHash: opts.nftContractPackageHash,
+		    nftContractHash: opts.nftContractHash,
 		    eventStreamAddress: opts.eventStreamAddress,
 		    contract: this.marketContract
 		});
@@ -47,7 +49,7 @@ class Market {
     }
 
 	//TODO: ensure unique ids
-    async getMindId() {
+    async getMintId() {
 		const supply = await this.nftContract.queryContractData(['total_supply']);
 		return parseInt(supply) + 1;
     }

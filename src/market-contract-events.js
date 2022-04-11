@@ -2,7 +2,7 @@ const admin = require("firebase-admin");
 const db = admin.database();
 const { Contracts, EventStream, EventName } = require('casper-js-sdk');
 const EventParser = require('./utils/events.js');
-const { sleep } = require('./utils/index.js');
+const { fromMotes, sleep } = require('./utils/index.js');
 
 const ListingCreated = "market_listing_created";
 const ListingPurchased = "market_listing_purchased";
@@ -12,6 +12,9 @@ class MarketContractEvents {
 
     constructor(opts = {}) {
         this.contract = opts.contract;
+
+        this.nftContractPackageHash = opts.nftContractPackageHash.replace('hash-','');
+        this.nftContractHash = opts.nftContractHash;
 
         this.eventParser = new EventParser({
             eventStreamAddress: opts.eventStreamAddress,
@@ -32,9 +35,9 @@ class MarketContractEvents {
             deploy_hash: event.deploy_hash,
             timestamp: event.timestamp,
             contract_package_hash: eventData.get('contract_package_hash'),
-            token_contract: eventData.get('token_contract'),
+            token_contract: this.getNFTPackageHash(eventData.get('token_contract')),
             token_id: eventData.get('token_id'),
-            price: eventData.get('price'),
+            price: fromMotes(eventData.get('price')),
             seller: eventData.get('seller')?.replace("Key::Account(", '').replace(')', ''),
             buyer: eventData.get('buyer')?.replace("Key::Account(", '').replace(')', '')
         };
@@ -42,40 +45,80 @@ class MarketContractEvents {
         switch (event.name) {
             case ListingCreated: this.listingCreated(item);
             break;
-            case ListingPurchased: //update owner in FB (I think transfer can handle)
+            case ListingPurchased: this.listingPurchased(item);
             break;
-            case ListingCanceled:
+            case ListingCanceled: this.listingCanceled(item);
             break;
             default: break;
         }
     }
 
     async listingCreated(event) {
-        // try {
-        //     const fbId = this.constructFBId(event);
+        try {
+            const fbId = this.constructFBId(event);
 
-        //     await db.ref('nfts').child(fbId).update({
-        //     });
-        //     this.updateActivity(event);
-        // } catch (e) {
-        //     console.log(e);
-        // }
+            await db.ref('nfts').child(fbId).update({
+                listing: {
+                    price: event.price,
+                    timestamp: event.timestamp
+                }
+            });
+            this.updateActivity(event);
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    async listingPurchased(event) {
+        try {
+            const fbId = this.constructFBId(event);
+
+            await db.ref('nfts').child(fbId).update({
+                owner: event.buyer,
+                listing: null
+            });
+            // add _purchase to deploy hash to avoid being overwritten by accompanying transfer event
+            this.updateActivity({...event, ...{deploy_hash: `${event.deploy_hash}_purchase`}});
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    async listingCanceled(event) {
+        try {
+            const fbId = this.constructFBId(event);
+
+            await db.ref('nfts').child(fbId).update({
+                listing: null
+            });
+            this.updateActivity(event);
+        } catch (e) {
+            console.log(e);
+        }
     }
 
     async updateActivity(event) {
-        // const fbId = this.constructFBId(event);
+        const fbId = this.constructFBId(event);
 
         // should only allow writing new events, never updating - set in firebase rules (not urgent since data is static)
-        // await db.ref('nfts').child(fbId).child('activity').child(event.deploy_hash).set({
-        //     event_type: event.event_type,
-        //     deploy_hash: event.deploy_hash,
-        //     timestamp: event.timestamp,
-        // });
+        await db.ref('nfts').child(fbId).child('activity').child(event.deploy_hash).set({
+            event_type: event.event_type,
+            deploy_hash: event.deploy_hash,
+            timestamp: event.timestamp,
+            seller: event.seller || null,
+            buyer: event.buyer || null,
+            price: event.price || null
+        });
     }
 
     constructFBId(event) {
-        // event.token_contract is the nft contract hash
-        // return `${event.token_contract}?id=${event.token_id}`;
+        return `${event.token_contract}?id=${event.token_id}`;
+    }
+
+    // NFT contract events only provide the package hash which we use as part of their index in our DB
+    getNFTPackageHash(contractHash) {
+        // TODO: query network for contract's package hash, requires custom implementation though
+        return (this.nftContractHash === contractHash.replace('contract','hash')) ? this.nftContractPackageHash : '???';
     }
 
 }

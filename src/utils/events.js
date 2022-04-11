@@ -1,4 +1,5 @@
 const { EventStream, EventName, CLTypeTag, CLValueBuilder, CLValueParsers } = require('casper-js-sdk');
+const { sleep } = require('./index.js');
 
 class EventParser {
 
