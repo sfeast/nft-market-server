@@ -59,7 +59,7 @@ class NFTContractEvents {
 
             try {
                 metadataUri = (await this.getMetadataURI(event.token_id))?.get('token_uri');
-                metadata = await this.fetchIPFSData(metadataUri);
+                metadata = await this.fetchIPFSData(`https://ipfs.io/ipfs/${metadataUri}`);
             } catch(e) {
                 console.log(e);
             }
