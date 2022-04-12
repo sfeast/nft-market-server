@@ -6,7 +6,9 @@ const MiniSearch = require('minisearch')
 class Search {
 
     constructor(opts = {}) {
+        this.nftPackage = opts.nftPackage;
         // simple in memory search
+        // limitations: scalability & current approach is limited to our single nft contract
         this.miniSearch = new MiniSearch({
             fields: ['token_id', 'contract', 'owner', 'name', 'description', 'price', 'listed', 'created'], // fields to index for full-text search
             storeFields: ['token_id', 'contract', 'owner', 'name', 'description', 'image', 'price', 'listed', 'created'] // fields to return with search results
@@ -44,9 +46,9 @@ class Search {
 
     async search(params) {
         if (params?.search) {
-            return this.advancedSearch(params.contract, params.search);
+            return this.advancedSearch(this.nftPackage, params.search);
         } else {
-            return this.miniSearch.search(params.contract);
+            return this.miniSearch.search(this.nftPackage);
         }
     }
 

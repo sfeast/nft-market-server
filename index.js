@@ -41,7 +41,9 @@ const market = new Market({
 });
 
 const Search = require('./src/search.js');
-const search = new Search({});
+const search = new Search({
+    nftPackage: NFT_CONTRACT_PACKAGE_HASH
+});
 
 express()
     .use(cors())
