@@ -46,10 +46,6 @@ const search = new Search({});
 express()
     .use(cors())
     .use(express.json({ limit: '50mb'}))
-    // .use(express.static(path.join(__dirname, 'public')))
-    // .set('views', path.join(__dirname, 'views'))
-    // .set('view engine', 'ejs')
-    // .get('/', (req, res) => res.render('pages/index'))
 
     .post('/sendDeploy', async (req, res) => {
         market.sendDeploy(req.body).then((response) => {
@@ -82,6 +78,22 @@ express()
     .get('/getAccountBalance', async (req, res) => {
         market.getAccountBalance(req.query.publicKeyHash).then(response => {
             res.status(200).json(response);
+        }).catch((error) => {
+            res.send(error);
+        })
+    })
+
+    .get("/getItem", async (req, res) => {
+        search.getItem(req.query.contract, req.query.token_id).then((response) => {
+            res.send(response);
+        }).catch((error) => {
+            res.send(error);
+        })
+    })
+
+    .post("/search", async (req, res) => {
+        search.search(req.body).then((response) => {
+            res.send(response);
         }).catch((error) => {
             res.send(error);
         })

@@ -10,6 +10,12 @@ const toMotes = amt => {
     return amt * 1000000000;
 };
 
+const constructFBId = (collection, id) => {
+    // FIXME: create a hash
+    return `${collection}?id=${id}`;
+}
+
 exports.sleep = sleep;
 exports.fromMotes = fromMotes;
 exports.toMotes = toMotes;
+exports.constructFBId = constructFBId;

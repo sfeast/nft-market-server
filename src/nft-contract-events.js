@@ -1,7 +1,7 @@
 const admin = require("firebase-admin");
 const db = admin.database();
 const fetch = require('node-fetch');
-const { sleep } = require('./utils/index.js');
+const { sleep, constructFBId } = require('./utils/index.js');
 const { Contracts } = require('casper-js-sdk');
 const { CEP47Events } = require('casper-cep47-js-client');
 const EventParser = require('./utils/events.js');
@@ -121,8 +121,7 @@ class NFTContractEvents {
     }
 
     constructFBId(event) {
-        // FIXME: create a hash
-        return `${event.contract_package_hash}?id=${event.token_id}`;
+        return constructFBId(event.contract_package_hash, event.token_id);
     }
 
 }

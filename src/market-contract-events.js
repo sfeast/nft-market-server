@@ -2,7 +2,7 @@ const admin = require("firebase-admin");
 const db = admin.database();
 const { Contracts, EventStream, EventName } = require('casper-js-sdk');
 const EventParser = require('./utils/events.js');
-const { fromMotes, sleep } = require('./utils/index.js');
+const { fromMotes, sleep, constructFBId } = require('./utils/index.js');
 
 const ListingCreated = "market_listing_created";
 const ListingPurchased = "market_listing_purchased";
@@ -112,7 +112,7 @@ class MarketContractEvents {
     }
 
     constructFBId(event) {
-        return `${event.token_contract}?id=${event.token_id}`;
+        return constructFBId(event.token_contract, event.token_id);
     }
 
     // NFT contract events only provide the package hash which we use as part of their index in our DB

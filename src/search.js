@@ -1,56 +1,109 @@
 const admin = require("firebase-admin");
 const db = admin.database();
+const { sleep, constructFBId } = require('./utils/index.js');
 const MiniSearch = require('minisearch')
-const miniSearch = new MiniSearch({
-    fields: ['name', 'description'], // fields to index for full-text search
-    storeFields: ['id', 'name', 'price'] // fields to return with search results
-});
 
 class Search {
 
     constructor(opts = {}) {
-        this.addWatchers('nfts');
-        
-        /*
-            // miniSearch examples:
-            setTimeout(()=>{
-                const results = miniSearch.search('description')
-                console.log(results);
-            }, 1000);
+        // simple in memory search
+        this.miniSearch = new MiniSearch({
+            fields: ['token_id', 'contract', 'owner', 'name', 'description', 'price', 'listed', 'created'], // fields to index for full-text search
+            storeFields: ['token_id', 'contract', 'owner', 'name', 'description', 'image', 'price', 'listed', 'created'] // fields to return with search results
+        })
 
-            setTimeout((minPrice=50, maxPrice=100)=>{
-                // doesn't get any results w/out also having some matching text in the search
-                // asking for help - https://github.com/lucaong/minisearch/issues/144
-                const results = miniSearch.search('crazy', {
-                    filter: (result) => {
-                        return result.price >= minPrice && result.price <= maxPrice
-                    }
-                });
-                console.log(results);
-            }, 2000);
-        */
+        db.ref('nfts').on('value', this.setDB.bind(this));
     };
 
-    addWatchers(index) {
-        db.ref(index).on('child_added', this.createIndex.bind(this, index));
-        // db.ref(index).on('child_changed', this.updateIndex.bind(this, index));
-        // db.ref(index).on('child_removed', this.removeIndex.bind(this, index));
-    };
+    setDB(snap) {
+        this.miniSearch.removeAll();
+        const docs = Object.entries(snap.val()).map(i => {
+            const key = i[0],
+                  val = i[1];
 
-    createIndex(index, snap) {
-        miniSearch.add({id: snap.key, ...snap.val().metadata, price: snap.val()?.price});
-    };
+            return {
+                id: key,
+                owner: val?.owner,
+                name: val?.metadata?.name,
+                description: val?.metadata?.description,
+                created: this.getMintedDate(val),
+                image: val?.metadata?.image,
+                price: val?.listing?.price,
+                contract: val?.contract_package_hash,
+                token_id: val?.token_id,
+                listed: !!val?.listing
+            }
+        });
+        this.miniSearch.addAll(docs);
+    }
 
-    updateIndex(index, snap) {
-        // need to look into how to properly update items - think they have to be removed then re-added
-        // https://lucaong.github.io/minisearch/classes/_minisearch_.minisearch.html#remove
-        // related - https://github.com/lucaong/minisearch/issues/45
-    };
+    async getItem(contract, id) {
+        const fbId = constructFBId(contract, id);
+        return (await db.ref('nfts').child(fbId).once('value')).val();
+    }
 
-    removeIndex(index, snap) {
-        console.log("removed - ", snap.key)
-    };
+    async search(params) {
+        if (params?.search) {
+            return this.advancedSearch(params.contract, params.search);
+        } else {
+            return this.miniSearch.search(params.contract);
+        }
+    }
 
+    advancedSearch(contract, params) {
+        let results;
+
+        if (params.text) {
+            results = this.miniSearch.search(params.text);
+        }
+
+        if (params.buyNow) {
+            const r = this.miniSearch.search(contract, {
+                filter: (result) => {
+                    return result.listed
+                }
+            })
+            results = this.getIntersection(results, r);
+        }
+
+        if (params.age) {
+            const r = this.miniSearch.search(contract, {
+                filter: (result) => {
+                    const date = new Date();
+                    date.setDate(date.getDate() - params.age)
+                    return (new Date(result.created).getTime()) > (date.getTime())
+                }
+            })
+            results = this.getIntersection(results, r);
+        }
+
+        if (params.price) {
+            const r = this.miniSearch.search(contract, {
+                filter: (result) => {
+                    return result.price >= params.price.min && result.price <= params.price.max
+                }
+            })
+            results = this.getIntersection(results, r);
+        }
+
+        return results.sort((a, b) => b.score - a.score);
+    }
+
+    getIntersection(r1, r2) {
+        if (r1) {
+            return r1.filter(r1_val => r2.some(r2_val => r2_val.id === r1_val.id));
+        } else {
+            return r2;
+        }
+    }
+
+    getMintedDate(item) {
+        try {
+            return Object.values(item.activity).find(a => a.event_type === "cep47_mint_one").timestamp;
+        } catch (e) {
+            console.log(e);
+        }
+    }
 
 }
 
