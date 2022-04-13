@@ -47,6 +47,8 @@ class Search {
     async search(params) {
         if (params?.search) {
             return this.advancedSearch(this.nftPackage, params.search);
+        } else if (params?.length) {
+            return this.miniSearch.search(this.nftPackage).slice(0, params.length);
         } else {
             return this.miniSearch.search(this.nftPackage);
         }
@@ -86,6 +88,10 @@ class Search {
                 }
             })
             results = this.getIntersection(results, r);
+        }
+
+        if (params.length) {
+            results = results.slice(0, params.length);
         }
 
         return results.sort((a, b) => b.score - a.score);
