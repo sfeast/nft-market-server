@@ -17,6 +17,7 @@ class Search {
         db.ref('nfts').on('value', this.setDB.bind(this));
     };
 
+    // TODO: debounce
     setDB(snap) {
         this.miniSearch.removeAll();
         const docs = Object.entries(snap.val()).map(i => {

@@ -11,7 +11,7 @@ const toMotes = amt => {
 };
 
 const constructFBId = (collection, id) => {
-    // FIXME: create a hash
+    // TODO: create a hash
     return `${collection}?id=${id}`;
 }
 

@@ -5,8 +5,11 @@ const EventParser = require('./utils/events.js');
 const { fromMotes, sleep, constructFBId } = require('./utils/index.js');
 
 const ListingCreated = "market_listing_created";
-const ListingPurchased = "market_listing_purchased";
 const ListingCanceled = "market_listing_canceled";
+const ListingPurchased = "market_listing_purchased";
+const OfferCreated = "market_offer_created";
+const OfferWithdraw = "market_offer_withdraw";
+const OfferAccepted = "market_offer_accepted";
 
 class MarketContractEvents {
 
@@ -22,13 +25,16 @@ class MarketContractEvents {
             eventNames: [
                 ListingCreated,
                 ListingPurchased,
-                ListingCanceled
+                ListingCanceled,
+                OfferCreated,
+                OfferWithdraw,
+                OfferAccepted
             ],
             eventHandler: this.eventReceived.bind(this)
         });
     }
 
-    eventReceived(event) {
+   eventReceived(event) {
         const eventData = Contracts.fromCLMap(event.clValue.data);
         const item = {
             event_type: eventData.get('event_type'),
@@ -48,6 +54,12 @@ class MarketContractEvents {
             case ListingPurchased: this.listingPurchased(item);
             break;
             case ListingCanceled: this.listingCanceled(item);
+            break;
+            case OfferCreated: this.offerCreated(item);
+            break;
+            case OfferWithdraw: this.offerWithdraw(item);
+            break;
+            case OfferAccepted: this.offerAccepted(item);
             break;
             default: break;
         }
@@ -69,6 +81,20 @@ class MarketContractEvents {
         }
     }
 
+    async listingCanceled(event) {
+        try {
+            const fbId = this.constructFBId(event);
+
+            await db.ref('nfts').child(fbId).update({
+                listing: null
+            });
+            // modify deploy hash to avoid being overwritten by transfer event (happens on offerAccepted)
+            this.updateActivity({...event, ...{deploy_hash: `${event.deploy_hash}_listing_canceled`}});
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
     async listingPurchased(event) {
         try {
             const fbId = this.constructFBId(event);
@@ -77,21 +103,48 @@ class MarketContractEvents {
                 owner: event.buyer,
                 listing: null
             });
-            // add _purchase to deploy hash to avoid being overwritten by accompanying transfer event
+            // modify deploy hash to avoid being overwritten by transfer event
             this.updateActivity({...event, ...{deploy_hash: `${event.deploy_hash}_purchase`}});
         } catch (e) {
             console.log(e);
         }
     }
 
-    async listingCanceled(event) {
+    async offerCreated(event) {
+        try {
+            const fbId = this.constructFBId(event);
+
+            await db.ref('nfts').child(fbId).child('offers').child(event.buyer).update({
+                price: event.price,
+                timestamp: event.timestamp
+            });
+            this.updateActivity(event);
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    async offerWithdraw(event) {
+        try {
+            const fbId = this.constructFBId(event);
+
+            await db.ref('nfts').child(fbId).child('offers').child(event.buyer).remove();
+            this.updateActivity(event);
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    async offerAccepted(event) {
         try {
             const fbId = this.constructFBId(event);
 
             await db.ref('nfts').child(fbId).update({
-                listing: null
+                owner: event.buyer,
+                offers: null
             });
-            this.updateActivity(event);
+            // modify deploy hash to avoid being overwritten by transfer event
+            this.updateActivity({...event, ...{deploy_hash: `${event.deploy_hash}_offer_accepted`}});
         } catch (e) {
             console.log(e);
         }
@@ -100,7 +153,7 @@ class MarketContractEvents {
     async updateActivity(event) {
         const fbId = this.constructFBId(event);
 
-        // should only allow writing new events, never updating - set in firebase rules (not urgent since data is static)
+        // should only allow writing new events, never updating - set in firebase rules (not urgent since data is "static")
         await db.ref('nfts').child(fbId).child('activity').child(event.deploy_hash).set({
             event_type: event.event_type,
             deploy_hash: event.deploy_hash,

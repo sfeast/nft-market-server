@@ -54,14 +54,6 @@ class Market {
 		return parseInt(supply) + 1;
     }
 
-    async storeMetaData(metadata) {
-        //TODO: store metadata on decentralized storage (maybe not necessary for hackathon) & return url.
-        //      May be possible/better to do this client side? Not sure about security though.
-        //QUESTION: What format to store - some store as ipfs://QmZKxj2f51gptdnTmhzPHvB1qpoi5U4QazXaBBvUDeQzKB
-        const response = 'https://ipfs.io/ipfs/QmeSjSinHpPnmXmspMjwiXyN6zS4E9zccariGR3jxcaWtq/4671';
-        return ['token_uri', response];
-    }
-
     async getAccountBalance(publicKeyHash) {
         const publicKey = CLPublicKey.fromHex(publicKeyHash);
         const response = await this.client.balanceOfByPublicKey(publicKey).catch((error) => {
