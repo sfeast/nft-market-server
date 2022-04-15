@@ -16,10 +16,10 @@ admin.initializeApp({
 const NODE_ADDRESS='http://95.216.67.162:7777/rpc'
 const EVENT_STREAM_ADDRESS='http://95.216.67.162:9999/events/main'
 const CHAIN_NAME = 'casper-test';
-const NFT_CONTRACT_HASH = 'hash-9de2e5785c920c139d66bf6db7198b48019ddb6973dc3d13e61b9c12a76d45a1';
-const NFT_CONTRACT_PACKAGE_HASH = 'hash-e38adbdaca505cbe435ede201f64771350d6f5a282510bd49df56c8424e946f3';
-const MARKET_CONTRACT_HASH = 'hash-ccdb2fab9f8cbb2416cb1227a7ffcbc35a33ae9f8059f5a637e4a2a92e766575';
-const MARKET_CONTRACT_PACKAGE_HASH = 'hash-bc6b9203fb9b07ff1e1e30b7eb2d870e39101feab82a6e4ff2e8f88bedf21a6d';
+const NFT_CONTRACT_HASH = 'hash-b82baff7badcbd0066aaf84006a5b5c6159a81ca2f0daf937f5894739a3d6863';
+const NFT_CONTRACT_PACKAGE_HASH = 'hash-fb1b716196827c6f6ffe76e1dd4d11dee2595436ae443ef6bf889f7c2c27d8ca';
+const MARKET_CONTRACT_HASH = 'hash-02067ab5ddf5d5cace04fb622994ff562343bc27eb5d03c9ae3a951c018a55ed';
+const MARKET_CONTRACT_PACKAGE_HASH = 'hash-d0f060ce28fde52b867ed75700bd500de5396a4578e82aa324c16290ca1c6522';
 
 // /* NCTL */
 // const NODE_ADDRESS = 'http://localhost:11101/rpc';
