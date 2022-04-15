@@ -11,8 +11,10 @@ class Search {
         // simple in memory search
         // limitations: scalability & current approach is limited to our single nft contract
         this.miniSearch = new MiniSearch({
-            fields: ['token_id', 'contract', 'owner', 'name', 'description', 'price', 'listed', 'offers', 'created'], // fields to index for full-text search
-            storeFields: ['token_id', 'contract', 'owner', 'name', 'description', 'image', 'price', 'listed', 'offers', 'created'] // fields to return with search results
+            // fields to index for full-text search
+            fields: ['token_id', 'contract', 'owner', 'name', 'description', 'price', 'listed', 'offers', 'featured', 'created'],
+            // fields to return with search results
+            storeFields: ['token_id', 'contract', 'owner', 'name', 'description', 'image', 'price', 'listed', 'offers', 'featured', 'created']
         })
 
         db.ref('nfts').on('value',
@@ -36,7 +38,8 @@ class Search {
                 contract: val?.contract_package_hash,
                 token_id: val?.token_id,
                 listed: !!val?.listing,
-                offers: !!val?.offers
+                offers: !!val?.offers,
+                featured: !!val?.featured
             }
         });
         this.miniSearch.addAll(docs);
@@ -52,6 +55,8 @@ class Search {
             return this.advancedSearch(this.nftPackage, params.search);
         } else if (params?.length) {
             return this.miniSearch.search(this.nftPackage).slice(0, params.length);
+        } else if (params?.featured) {
+            return this.getFeatured(this.nftPackage);
         } else {
             return this.miniSearch.search(this.nftPackage);
         }
@@ -107,6 +112,15 @@ class Search {
         }
 
         return results.sort((a, b) => b.score - a.score);
+    }
+
+    getFeatured(contract) {
+        const results = this.miniSearch.search(contract, {
+            filter: (result) => {
+                return result.featured;
+            }
+        })
+        return results;
     }
 
     getIntersection(r1, r2) {
