@@ -24,16 +24,17 @@ const MARKET_CONTRACT_PACKAGE_HASH = 'hash-bc6b9203fb9b07ff1e1e30b7eb2d870e39101
 // /* NCTL */
 // const NODE_ADDRESS = 'http://localhost:11101/rpc';
 // const CHAIN_NAME = 'casper-net-1';
-// const NFT_CONTRACT_HASH = 'hash-6539e9c16bbea881d2a9cc2183d72dca956c798a3fb838e5b9707fa938e06687';
-// const NFT_CONTRACT_PACKAGE_HASH = 'hash-a1f8c65b2f7776f314484433a43e9bd48e9bed423b022c21554f034d5ec92937';
-// const MARKET_CONTRACT_HASH = 'hash-34cfb79524146a9df2efb044a96479afd59688701f2c2aa09d856afad2ce7d22';
-// const MARKET_CONTRACT_PACKAGE_HASH = 'hash-3ff56d345cdc501971ff0ccb9946b57dc4974bdf15b83042c0def68cd90ec3bc';
+// const NFT_CONTRACT_HASH = 'hash-893df41fc9643fa47be74102f9b285b6b887dfeec39116fa83a66d1e51b822ec';
+// const NFT_CONTRACT_PACKAGE_HASH = 'hash-b56724868f78444699972ea0ec88a220909af2bc460af7916d0f1aed72d012e2';
+// const MARKET_CONTRACT_HASH = 'hash-e9ddf68fcf551da741d37cf3e5d229f4f48db8303d282278bcdf82d2469786cb';
+// const MARKET_CONTRACT_PACKAGE_HASH = 'hash-7ead7247e05f3f3922147c6545968c1ab1b48fd8e28a704e45ad8af0bc63d5fe';
 // const EVENT_STREAM_ADDRESS = 'http://localhost:18101/events/main';
 
 const Market = require('./src/market.js');
 const market = new Market({
     nodeAddress: NODE_ADDRESS,
     eventStreamAddress: EVENT_STREAM_ADDRESS,
+    chainName: CHAIN_NAME,
     nftContractHash: NFT_CONTRACT_HASH,
     nftContractPackageHash: NFT_CONTRACT_PACKAGE_HASH,
     marketContractHash: MARKET_CONTRACT_HASH,
@@ -73,6 +74,22 @@ express()
 
     .get('/getAccountBalance', async (req, res) => {
         market.getAccountBalance(req.query.publicKeyHash).then(response => {
+            res.status(200).json(response);
+        }).catch((error) => {
+            res.send(error);
+        })
+    })
+
+    .get('/getAllowance', async (req, res) => {
+        market.getAllowance(req.query.publicKeyHash, req.query.token_id).then(response => {
+            res.status(200).json(response);
+        }).catch((error) => {
+            res.send(error);
+        })
+    })
+
+    .get('/getOwner', async (req, res) => {
+        market.getOwner(req.query.token_id).then(response => {
             res.status(200).json(response);
         }).catch((error) => {
             res.send(error);

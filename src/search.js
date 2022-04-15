@@ -2,6 +2,7 @@ const admin = require("firebase-admin");
 const db = admin.database();
 const { sleep, constructFBId } = require('./utils/index.js');
 const MiniSearch = require('minisearch')
+const _debounce = require('lodash/debounce');
 
 class Search {
 
@@ -10,14 +11,14 @@ class Search {
         // simple in memory search
         // limitations: scalability & current approach is limited to our single nft contract
         this.miniSearch = new MiniSearch({
-            fields: ['token_id', 'contract', 'owner', 'name', 'description', 'price', 'listed', 'created'], // fields to index for full-text search
-            storeFields: ['token_id', 'contract', 'owner', 'name', 'description', 'image', 'price', 'listed', 'created'] // fields to return with search results
+            fields: ['token_id', 'contract', 'owner', 'name', 'description', 'price', 'listed', 'offers', 'created'], // fields to index for full-text search
+            storeFields: ['token_id', 'contract', 'owner', 'name', 'description', 'image', 'price', 'listed', 'offers', 'created'] // fields to return with search results
         })
 
-        db.ref('nfts').on('value', this.setDB.bind(this));
+        db.ref('nfts').on('value',
+            _debounce(this.setDB.bind(this), 1000));
     };
 
-    // TODO: debounce
     setDB(snap) {
         this.miniSearch.removeAll();
         const docs = Object.entries(snap.val()).map(i => {
@@ -34,7 +35,8 @@ class Search {
                 price: val?.listing?.price,
                 contract: val?.contract_package_hash,
                 token_id: val?.token_id,
-                listed: !!val?.listing
+                listed: !!val?.listing,
+                offers: !!val?.offers
             }
         });
         this.miniSearch.addAll(docs);
@@ -66,6 +68,15 @@ class Search {
             const r = this.miniSearch.search(contract, {
                 filter: (result) => {
                     return result.listed
+                }
+            })
+            results = this.getIntersection(results, r);
+        }
+
+        if (params.hasOffers) {
+            const r = this.miniSearch.search(contract, {
+                filter: (result) => {
+                    return result.offers
                 }
             })
             results = this.getIntersection(results, r);
@@ -111,6 +122,7 @@ class Search {
             return Object.values(item.activity).find(a => a.event_type === "cep47_mint_one").timestamp;
         } catch (e) {
             console.log(e);
+            return null;
         }
     }
 
