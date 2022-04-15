@@ -4,7 +4,7 @@ const PORT = process.env.PORT || 5000
 const cors = require('cors')
 const admin = require("firebase-admin");
 
-const serviceAccount = (process.env.ENV && JSON.parse(process.env.ENV['FIREBASE_PRIVATE_KEY']))
+const serviceAccount = (process.env.FIREBASE_SERVICE_ACCOUNT_KEY && JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY))
                         || require("./firebase-private-key.json");
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
