@@ -141,7 +141,8 @@ class MarketContractEvents {
 
             await db.ref('nfts').child(fbId).update({
                 owner: event.buyer,
-                offers: null
+                offers: null,
+                listing: null
             });
             // modify deploy hash to avoid being overwritten by transfer event
             this.updateActivity({...event, ...{deploy_hash: `${event.deploy_hash}_offer_accepted`}});
