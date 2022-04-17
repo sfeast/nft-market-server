@@ -22,27 +22,29 @@ class Search {
     };
 
     setDB(snap) {
-        this.miniSearch.removeAll();
-        const docs = Object.entries(snap.val()).map(i => {
-            const key = i[0],
-                  val = i[1];
+        if (snap.val()) {
+            this.miniSearch.removeAll();
+            const docs = Object.entries(snap.val()).map(i => {
+                const key = i[0],
+                      val = i[1];
 
-            return {
-                id: key,
-                owner: val?.owner,
-                name: val?.metadata?.name,
-                description: val?.metadata?.description,
-                created: this.getMintedDate(val),
-                image: val?.metadata?.image,
-                price: val?.listing?.price,
-                contract: val?.contract_package_hash,
-                token_id: val?.token_id,
-                listed: !!val?.listing,
-                offers: !!val?.offers,
-                featured: !!val?.featured
-            }
-        });
-        this.miniSearch.addAll(docs);
+                return {
+                    id: key,
+                    owner: val?.owner,
+                    name: val?.metadata?.name,
+                    description: val?.metadata?.description,
+                    created: this.getMintedDate(val),
+                    image: val?.metadata?.image,
+                    price: val?.listing?.price,
+                    contract: val?.contract_package_hash,
+                    token_id: val?.token_id,
+                    listed: !!val?.listing,
+                    offers: !!val?.offers,
+                    featured: !!val?.featured
+                }
+            });
+            this.miniSearch.addAll(docs);
+        }
     }
 
     async getItem(contract, id) {
